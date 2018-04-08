@@ -18,26 +18,42 @@ class App extends Component {
     ws.addEventListener('message', event => {
       let data = JSON.parse(event.data)
 
+      console.log(data)
+
       let trace = data.data.trace
       let session = this.state.sessions.find(session => (session.id === trace.sessionId))
 
       if (session === undefined) {
+        let tracepoint = session.tracepoints.find(tracepoint => (tracepoint.id === trace.tracepointId))
+        let session = {
+          id: trace.sessionId,
+          traces: [trace],
+          tracepoints: [tracepoint]
+        }
+
         this.setState(function(prevState) {
-          let session = {
-            id: trace.sessionId,
-            traces: [trace]
-          }
           return { sessions: prevState.sessions.concat(session) }
         })
       } else {
+        let tracepoint = session.tracepoints.find(tracepoint => (tracepoint.id === trace.tracepointId))
         let sessionIndex = this.state.sessions.map(s => s.id).indexOf(trace.sessionId)
-
-        console.log("session index", sessionIndex)
-        console.log("sessions", this.state.sessions)
 
         this.setState({
           sessions: update(this.state.sessions, {[sessionIndex]: {traces: {$push: [trace]}}})
         })
+
+        if (tracepoint === undefined) {
+          let tracepoint = {
+            id: trace.tracepointId
+          }
+          this.setState({
+            sessions: update(this.state.sessions, {
+              [sessionIndex]: {
+                tracepoints: {$push: [tracepoint]}
+              }
+            })
+          })
+        }
       }
     })
   }
@@ -46,10 +62,18 @@ class App extends Component {
     let tabs = this.state.sessions.map(session => (<Tab key={session.id}>{session.id.slice(0, 3)}</Tab>))
 
     let tabPanels = this.state.sessions.map(session => {
-      let traces = session.traces.map(trace => <li key={trace.id}>{trace.result}</li>)
+      let traces = session.traces.map(trace => <div className="trace-result" key={trace.id}>{trace.result}</div>)
+      let tracepoints = session.tracepoints.map(tracepoint =>
+        <div className="tracepoint" key={tracepoint.id}>
+          <div>{tracepoint.id}</div>
+          <input />
+        </div>
+      )
+
       return (
         <TabPanel key={session.id}>
-          <ul>{traces}</ul>
+          <div className="trace-list">{traces}</div>
+          <div className="tracepoint-list">{tracepoints}</div>
         </TabPanel>
       )
       }
